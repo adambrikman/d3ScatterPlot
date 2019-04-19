@@ -1,0 +1,155 @@
+// Initialize dataset array
+var dataset = [];
+
+// Parse JSON data and push to dataset array
+document.addEventListener('DOMContentLoaded',function(){
+      req=new XMLHttpRequest();
+  req.open("GET", 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json', true);
+  req.send();
+  req.onload=function() {
+    json=JSON.parse(req.responseText);
+    for(var prop in json) {
+      dataset.push(json[prop]);
+    }
+
+// Set constants of width, height & padding
+const w = 800;
+const h = 530;
+const p = 80;
+
+// Find minimum and maximum of Y Coordinates
+let min = d3.min(dataset, (d) => d.Time);
+let max = d3.max(dataset, (d) => d.Time);
+
+// Parse time of Y coordinate data. D3 Documentation: https://github.com/d3/d3-time-format
+var parseTime = d3.timeParse("%M:%S");
+
+// Create the scales for the X & Y Axis
+const xScale = d3.scaleLinear()
+                .domain([d3.min(dataset, (d) => d.Year-1),d3.max(dataset, (d) => d.Year)+1])
+                .range([p, w-p]);
+
+const yScale = d3.scaleTime()
+               .domain([new Date(parseTime(max)), new Date(parseTime(min))])
+               .range([h-p, p]);
+
+// Create SVG element
+const svg = d3.select("body")
+              .append("svg")
+              .attr("width", w)
+              .attr("height", h);
+
+// Create div for tooltip
+var tooltip = d3.selectAll("body")
+                .append("div")
+                .attr("id","tooltip")
+                .style("opacity", 0);
+
+// Create a legend for the scatterplot
+var legend = d3.selectAll("body")
+                .append("div")
+                .attr("id","legend")
+                .style("position", "relative")
+                .style("bottom", 280 + "px")
+                .style("left", w-(p*3.5) + "px")
+                .html("Riders with doping allegations")
+                .style("color", "rgb(255,126,139)") // cheater
+                .style("font-size", 14 + "px")
+                .append("div")
+                .html("No doping allegations")
+                .style("color", "rgb(124,194,143)") // not a cheater
+    
+// Draw circles on scatterplot
+svg.selectAll("circle")
+              .data(dataset)
+              .enter()
+              .append("circle")
+              .attr("class", "dot")
+              .attr("cx", (d) => xScale(d.Year))
+              .attr("cy", (d) => yScale(new Date (parseTime([d.Time]))))
+              .attr("r", 5)
+              .attr("data-xvalue", (d) => (d.Year))
+              .attr("data-yvalue", (d) => (new Date (parseTime([d.Time]))))
+              .style("stroke", "black")
+              .style("stroke-width", ".4px")
+              .attr("fill", (d) => {
+                if(d.Doping == false) {
+                  return "rgb(124,194,143)"; // not a cheater
+                } else {
+                  return "rgb(255,126,139)"; // cheater
+                }
+              })
+
+              // Create tooltip for plotted data
+              .on("mouseover", function(d) {
+                tooltip.style("opacity", .9)
+                        .style("z-index", 10)
+                        .style("border-radius", 5 + "px")
+                        .style("position", "absolute")
+                        .style("font-size", "14px")
+                        .style("left", (d3.event.pageX+10) + "px")
+                        .style("top", (d3.event.pageY-30) + "px")
+                        .style("box-shadow", "1px 1px 10px")
+                        .style("background", "white")
+                        .style("padding", "10px")
+                        .style("pointer-events", "none")
+                        .html(d.Name+": " +d.Nationality + "<br/>"+"Year: " + d.Year+", Time: " + d.Time +"<br/>" + d.Doping)
+                        .attr("data-year", d.Year)
+            })				
+            .on("mouseout", function(d) {		
+                tooltip.style("opacity", 0);	
+        });   
+
+// Create scatterplot title
+let title = d3.select("body")
+              .append("div")
+              .text("Doping in Professional Bicycle Racing")
+              .attr("id", "title")
+              .style("position", "relative")
+              .style("font-size", "32px")
+              .style("bottom", h+(p*.4) + "px")
+              .style("left", 180 + "px");
+
+// Create subtitle for Scatterplot
+let subtitle = d3.select("body")
+                  .append("div")
+                  .text("35 Fastest times up Alpe d'Huez")
+                  .attr("id", "subtitle")
+                  .style("position", "relative")
+                  .style("font-size", "20px")
+                  .style("bottom", h+(p*.4) + "px")
+                  .style("left", 290 + "px");
+
+// Create a label for the Y-Axis
+var yText = d3.select("body")
+    .append("div")
+    .attr("id", "yAxisLabel")
+    .html("Time in Minutes")
+    .style("position", "relative")
+    .style("display", "inline-block")
+    .style("transform", "rotate(270deg)")
+    .style("bottom", (h - p) + "px")
+    .style("right", 30 + "px");
+
+// Format Y-Axis
+const yAxis = d3.axisLeft(yScale)
+                .ticks(d3.timeSecond.every(15))
+                .tickFormat(d3.timeFormat("%M:%S"));
+
+// Format X-Axis
+const xAxis = d3.axisBottom(xScale)
+                .tickFormat(d3.format("d"));
+
+// Draw X & Y-Axis
+svg.append("g")
+    .attr("transform", "translate(0," + (h-p) + ")")
+    .call(xAxis)
+    .attr("id", "x-axis");
+
+svg.append("g")
+    .attr("transform", "translate(80," + 0 + ")")
+    .call(yAxis)
+    .attr("id", "y-axis");
+  
+  }
+});
